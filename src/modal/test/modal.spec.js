@@ -272,6 +272,29 @@ describe('$modal', function () {
       element.remove();
     });
 
+    it('should support Tab and return focus to the dialog', function () {
+      var link = '<a href>Link</a>';
+      var aElement = angular.element(link);
+      angular.element(document.body).append(aElement);
+      aElement.focus();
+      expect(document.activeElement.tagName).toBe('A');
+
+      var modal = open({template: '<div>Content<input type="text"><button>inside modal</button></div>'});
+      $timeout.flush();
+
+      //Focus to last link
+      var lastAElement = angular.element(document.body).find('a[href]').last();
+      lastAElement.focus();
+      var $activeElement = angular.element(document.activeElement.tagName);
+      expect($activeElement).toHaveClass('modal');
+      expect($document).toHaveModalsOpen(1);
+
+      dismiss(modal);
+      expect($document).toHaveModalsOpen(0);
+
+      aElement.remove();
+    });
+
     it('should resolve returned promise on close', function () {
       var modal = open({template: '<div>Content</div>'});
       close(modal, 'closed ok');
@@ -746,6 +769,51 @@ describe('$modal', function () {
 
       element.remove();
     });
+
+    it('should support Tab and return focus to the current dialog', function () {
+      var link = '<a href>Link</a>';
+      var currentModalID;
+      var aElement = angular.element(link);
+      angular.element(document.body).append(aElement);
+      aElement.focus();
+      expect(document.activeElement.tagName).toBe('A');
+
+      //Open modal1
+      var modal1 = open({template: '<div id="modal1">Content<input type="text"><button>inside modal1</button></div>'});
+      $timeout.flush();
+
+      //Focus to last link
+      var lastAElement = angular.element(document.body).find('a[href]').last();
+
+      //Focus outside of modal1
+      expect($document).toHaveModalsOpen(1);
+      lastAElement.focus();
+      currentModalID = document.activeElement.querySelector('div[id]').id;
+      expect(currentModalID).toBe('modal1');
+
+      //Open modal2
+      var modal2 = open({template: '<div id="modal2">Modal2</div>'});
+      $timeout.flush();
+
+      //Focus outside of modal2
+      expect($document).toHaveModalsOpen(2);
+      lastAElement.focus();
+      currentModalID = document.activeElement.querySelector('div[id]').id;
+      expect(currentModalID).toBe('modal2');
+      dismiss(modal2);
+
+      //Focus change to modal1
+      expect($document).toHaveModalsOpen(1);
+      currentModalID = document.activeElement.querySelector('div[id]').id;
+      expect(currentModalID).toBe('modal1');
+
+
+      dismiss(modal1);
+      expect($document).toHaveModalsOpen(0);
+
+      aElement.remove();
+    });
+
   });
 
   describe('modal.closing event', function() {
