@@ -2087,6 +2087,65 @@ angular.module('ui.bootstrap.modal', [])
     };
   }])
 
+  .directive('enforceFocus',['$document', '$modalStack', function ($document, $modalStack) {
+    return {
+      link: function($scope, iElm) {
+        var body = $document.find('body').eq(0);
+        var trapFocusDomEl = angular.element('<div tabindex="0"></div>');
+        body.append(trapFocusDomEl);
+
+
+        function currentModal(){
+          var modal = $modalStack.getTop();
+          if (modal && modal.value) {
+            return modal.value.modalDomEl[0] === iElm[0];
+          }
+        }
+
+        //enforceFocus inside modal
+        function enforceFocus(evt) {
+          if (!currentModal()) {
+            return;
+          }
+          if (iElm[0] !== evt.target && !iElm[0].contains(evt.target)) {
+            iElm[0].focus();
+          }
+        }
+        $document[0].addEventListener('focus', enforceFocus, true);
+
+
+        //return lastFocusable element inside modal
+        function lastFocusable(domEl) {
+          var tababbleSelector = 'a[href], area[href], input:not([disabled]), button:not([disabled]),select:not([disabled]), textarea:not([disabled]), iframe, object, embed, *[tabindex], *[contenteditable]';
+          var list = domEl.querySelectorAll(tababbleSelector);
+          return list[list.length - 1];
+        }
+
+        var lastEl = lastFocusable(iElm[0]);
+        //focus lastElement when shitKey Tab first element
+        function shiftKeyTabTrap (evt) {
+          if (!currentModal()) {
+            return;
+          }
+          if(iElm[0] === evt.target && evt.shiftKey && evt.keyCode === 9){
+            lastEl.focus();
+            evt.preventDefault();
+          }
+        }
+        $document.bind('keydown', shiftKeyTabTrap);
+
+
+        $scope.$on('$destroy',function() {
+          //Remove trap
+          trapFocusDomEl.remove();
+          //Remove event listener
+          $document[0].removeEventListener('focus', enforceFocus, true);
+          $document.unbind('keydown', shiftKeyTabTrap);
+        });
+      }
+    };
+  }])
+
   .directive('modalAnimationClass', [
     function () {
       return {
@@ -2231,7 +2290,7 @@ angular.module('ui.bootstrap.modal', [])
           body.append(backdropDomEl);
         }
 
-        var angularDomEl = angular.element('<div modal-window="modal-window"></div>');
+        var angularDomEl = angular.element('<div enforce-focus modal-window="modal-window"></div>');
         angularDomEl.attr({
           'template-url': modal.windowTemplateUrl,
           'window-class': modal.windowClass,
